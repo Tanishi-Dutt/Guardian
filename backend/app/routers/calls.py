@@ -166,7 +166,8 @@ def el_turns(transcript: list) -> list:
 async def find_call(data: dict) -> live.Call | None:
     conv_id = data.get("conversation_id")
     dyn = (data.get("conversation_initiation_client_data") or {}).get("dynamic_variables") or {}
-    call = live.get(conv_id) or live.get(dyn.get("guardian_call_id") or "")
+    call = live.get(conv_id) or live.get(dyn.get("guardian_call_id") or "") \
+        or live.get(dyn.get("system__call_sid") or "")
     if call is None and (dyn.get("system__caller_id") or dyn.get("caller_number")):
         call = await live.resolve(conv_id, norm(dyn.get("system__caller_id") or dyn.get("caller_number")))
     return call

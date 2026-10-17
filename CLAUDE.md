@@ -17,4 +17,4 @@ Shared root files (`CONTRACTS.md`, `CLAUDE.md`, `GEMINI.md`, `.env.example`, `.g
 - Phone numbers are always E.164. Demo constants are in CONTRACTS §4.
 - `git pull --rebase` before starting and before every push. Small commits, at least hourly, to `main`.
 - Never commit `.env`, keys, recordings or `ml/data/`.
-- Backend runs from the repo root: `uvicorn backend.app.main:app --reload --port 8000`.
+- Backend runs from the repo root: `uvicorn backend.app.main:app --port 8000`.

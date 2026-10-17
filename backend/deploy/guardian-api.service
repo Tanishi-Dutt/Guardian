@@ -1,0 +1,15 @@
+[Unit]
+Description=Guardian backend (FastAPI)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=guardian
+WorkingDirectory=/opt/guardian
+EnvironmentFile=/opt/guardian/.env
+ExecStart=/opt/guardian/.venv/bin/uvicorn backend.app.main:app --host 127.0.0.1 --port 8000 --workers 1 --proxy-headers
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

@@ -12,10 +12,9 @@ last_alert_number: dict[str, str] = {}   # trusted phone -> number in the last a
 
 
 async def _photon(to: str, text: str):
-    # TODO(A): confirm Photon's send API at the event; this posts {to, from, text} with a bearer key.
-    async with httpx.AsyncClient(timeout=5) as client:
-        r = await client.post(C.PHOTON_SEND_URL, headers={"Authorization": f"Bearer {C.PHOTON_API_KEY}"},
-                              json={"to": to, "from": C.PHOTON_FROM or None, "text": text})
+    headers = {"Authorization": f"Bearer {C.PHOTON_SIDECAR_SECRET}"} if C.PHOTON_SIDECAR_SECRET else {}
+    async with httpx.AsyncClient(timeout=10) as client:
+        r = await client.post(f"{C.PHOTON_SIDECAR_URL}/send", headers=headers, json={"to": to, "text": text})
         r.raise_for_status()
 
 
@@ -30,7 +29,7 @@ async def send_text(to: str, text: str, number: str | None = None) -> str:
         last_alert_number[to] = number
     channel = "dry_run"
     try:
-        if C.PHOTON_API_KEY and C.PHOTON_SEND_URL:
+        if C.PHOTON_SIDECAR_URL:
             await _photon(to, text)
             channel = "photon"
         elif C.TWILIO_ACCOUNT_SID and C.TWILIO_AUTH_TOKEN and C.TWILIO_SMS_FROM:

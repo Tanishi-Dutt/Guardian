@@ -1,0 +1,14 @@
+[Unit]
+Description=Guardian Photon iMessage sidecar
+After=guardian-api.service
+
+[Service]
+User=guardian
+WorkingDirectory=/opt/guardian/backend/photon
+EnvironmentFile=/opt/guardian/.env
+ExecStart=/usr/bin/node index.mjs
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
