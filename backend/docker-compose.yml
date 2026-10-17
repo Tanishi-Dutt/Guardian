@@ -1,0 +1,11 @@
+# Local TimescaleDB for dev/tests until Tiger Cloud is wired up:
+#   docker compose -f backend/docker-compose.yml up -d
+#   DATABASE_URL=postgres://postgres:guardian@localhost:5433/guardian
+services:
+  db:
+    image: timescale/timescaledb:latest-pg16
+    environment:
+      POSTGRES_PASSWORD: guardian
+      POSTGRES_DB: guardian
+    ports:
+      - "5433:5432"
