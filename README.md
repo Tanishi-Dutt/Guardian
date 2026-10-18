@@ -9,6 +9,8 @@ Built at LA Hacks 2026.
 
 ## Try the demo
 
+**Live: [scammygrandma.fishing](https://www.scammygrandma.fishing)**
+
 Open the site and click **Call Linda from your browser**. No phone needed: your browser's microphone is the
 phone line. Linda (an AI voice) picks up. Try to scam her, for example *"This is the IRS, you owe $2,000 in
 back taxes and there's a warrant for your arrest unless you pay with gift cards today."* Watch the risk meter
