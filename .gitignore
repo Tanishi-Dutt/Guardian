@@ -8,3 +8,5 @@ dist/
 .DS_Store
 ml/data/
 backend/recordings/
+generate.log
+generate.log
