@@ -1,13 +1,7 @@
 # DOMAIN comes from /etc/default/caddy (set by setup.sh). Caddy gets TLS certificates automatically.
-# GoDaddy DNS: A records for @ and api -> the Vultr VM's IP.
+# GoDaddy DNS: A record for api -> the VM's IP. The web pages are on Vercel (@ and www).
 api.{$DOMAIN} {
 	reverse_proxy 127.0.0.1:8000 {
 		flush_interval -1   # stream SSE immediately
 	}
-}
-
-{$DOMAIN} {
-	root * /opt/guardian/web/dist
-	try_files {path} /index.html
-	file_server
 }

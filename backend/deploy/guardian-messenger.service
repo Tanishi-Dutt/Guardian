@@ -1,0 +1,15 @@
+[Unit]
+Description=Guardian family messenger (Photon Spectrum iMessage)
+After=guardian-api.service
+
+[Service]
+User=guardian
+WorkingDirectory=/opt/guardian/family-messenger
+EnvironmentFile=/opt/guardian/.env
+EnvironmentFile=/opt/guardian/family-messenger/.env
+ExecStart=/opt/guardian/family-messenger/node_modules/.bin/tsx src/index.ts
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

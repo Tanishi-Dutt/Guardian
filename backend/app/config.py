@@ -26,7 +26,7 @@ SCREEN_MODE = env("SCREEN_MODE", "register")
 TWILIO_ACCOUNT_SID = env("TWILIO_ACCOUNT_SID")
 TWILIO_AUTH_TOKEN = env("TWILIO_AUTH_TOKEN")
 TWILIO_SMS_FROM = env("TWILIO_SMS_FROM") or GUARDIAN_NUMBER
-# Photon's SDK is Node-only, so texts go through the sidecar in backend/photon (POST /send).
+# Photon's SDK is Node-only, so texts go through family-messenger/ (POST /send).
 PHOTON_SIDECAR_URL = env("PHOTON_SIDECAR_URL").rstrip("/")   # e.g. http://localhost:8787
 PHOTON_SIDECAR_SECRET = env("PHOTON_SIDECAR_SECRET")
 
@@ -57,6 +57,7 @@ REJECT_SCORE = 80
 # --- /tools/assess decision thresholds (section 6) ---
 END_RISK = 0.70
 CONNECT_RISK = 0.40
+WARN_RISK = 0.40          # mid-call "likely scam" heads-up to the family, once per call
 DECIDE_AFTER_TURNS = 3
 DECIDE_AFTER_SECONDS = 60
 HARD_STOP_SECONDS = 90

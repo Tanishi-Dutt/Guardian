@@ -57,6 +57,9 @@ async def assess(body: AssessIn, background: BackgroundTasks):
                              "latency_ms": result.get("latency_ms")}, call.id, call.user_id)
 
     action = risk.decide(call.max_risk, call.caller_turns, call.seconds)
+    if action == "continue" and not call.warned and call.max_risk >= C.WARN_RISK:
+        call.warned = True
+        background.add_task(live.warn_family, call)
     if action != "continue":
         call.final_action = action
         # Logging, scores, evidence and the family text happen after the agent has its answer.

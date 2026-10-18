@@ -33,6 +33,7 @@ class Call:
     evidence_id: str | None = None
     decided_at: float | None = None
     conversation_id: str | None = None
+    warned: bool = False              # family already got the mid-call heads-up
 
     @property
     def seconds(self) -> float:
@@ -127,6 +128,14 @@ def scam_text(call: Call, score: int, evidence_id: str) -> str:
             f"Red flags: {flags}. Scam score {score}/100. "
             f"Recording: {C.PUBLIC_BASE_URL}/e/{evidence_id}. "
             f"Reply BLOCK to block this number for everyone, or SAFE if you know them.")
+
+
+async def warn_family(call: Call):
+    """Heads-up while the screener is still talking to a suspicious caller."""
+    flags = "; ".join(call.red_flags[:3]) or "suspicious answers"
+    text = (f"Guardian: Heads up, Mom is getting a suspicious call right now from {pretty(call.number)}. "
+            f"Red flags: {flags}. Guardian is screening it and will hang up if it's a scam.")
+    await alert_family(call.id, call.user_id, "likely_scam", text, call.number)
 
 
 def whisper(call: Call) -> str:

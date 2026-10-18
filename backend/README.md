@@ -27,20 +27,23 @@ Use the Vultr deploy (below) or a paid ngrok for real calls.
 
 ## Family texts (Photon)
 
-Photon's SDK is Node-only, so `backend/photon/` is a small sidecar:
-`cd backend/photon && npm install && node index.mjs` (needs `PHOTON_ADDRESS`, `PHOTON_TOKEN`).
-It serves `POST /send {to, text}` for `app/notify.py` and forwards family replies to `/webhooks/photon`.
+Texts go through `family-messenger/` (Photon Spectrum, Node): `cd family-messenger && npm install && npm start`
+(needs its own `.env` with `PROJECT_ID` / `PROJECT_SECRET`). It serves `POST /send {to, text}` on :8787 for
+`app/notify.py` and forwards family replies to `/webhooks/photon`. Set `PHOTON_SIDECAR_URL=http://localhost:8787`.
 If `PHOTON_SIDECAR_URL` is empty, texts go out over Twilio SMS; with no Twilio keys either, they are only logged.
+The family gets a heads-up the first time a call's risk reaches `WARN_RISK`, then the scam text if Guardian ends it.
 
-## Deploy (Vultr + GoDaddy)
+## Deploy (any Ubuntu 24.04 VM + GoDaddy; web on Vercel)
 
-1. Vultr: Ubuntu 24.04 VM. GoDaddy DNS: `A @` and `A api` point to its IP.
+1. Create the VM (DigitalOcean / Vultr / Hetzner). GoDaddy DNS: `A api` -> its IP; `@` / `www` -> Vercel.
 2. On the VM as root: `curl -fsSL https://raw.githubusercontent.com/Tanishi-Dutt/Guardian/main/backend/deploy/setup.sh | DOMAIN=yourdomain.com bash`
-3. Copy `.env` to `/opt/guardian/.env` with `PUBLIC_BASE_URL=https://api.yourdomain.com` and the Tiger `DATABASE_URL`.
-   Then run `systemctl restart guardian-api && systemctl enable --now guardian-photon`.
-4. To ship new code: `sudo /opt/guardian/backend/deploy/update.sh` (it pulls main, reinstalls, rebuilds `web/` and restarts).
+3. Copy `.env` to `/opt/guardian/.env` (with `PUBLIC_BASE_URL=https://api.yourdomain.com`) and
+   `family-messenger/.env` to `/opt/guardian/family-messenger/.env`, `chown guardian:guardian` both,
+   then run `systemctl restart guardian-api && systemctl enable --now guardian-messenger`.
+4. To ship new code: `sudo /opt/guardian/backend/deploy/update.sh` (pulls main, reinstalls, restarts).
 
-Caddy serves `api.DOMAIN` (backend, TLS, SSE unbuffered) and `DOMAIN` (C's `web/dist`).
+Caddy serves `api.DOMAIN` (backend, TLS, SSE unbuffered). Vercel builds and serves `web/` (Root Directory `web`,
+env `VITE_API_BASE=https://api.yourdomain.com`).
 
 ## Extra env vars (beyond `.env.example`)
 

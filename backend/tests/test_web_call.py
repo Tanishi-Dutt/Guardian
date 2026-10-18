@@ -30,3 +30,16 @@ def test_end_after_scam_assess(client):
     assert client.post(f"/calls/web/{cid}/end").json() == {"ok": True, "outcome": "ended_scam"}
     assert client.post(f"/calls/web/{cid}/end").json()["outcome"] == "ended_scam"   # idempotent
     assert client.post("/calls/web/unknown/end").json() == {"ok": False}
+
+
+def test_family_gets_one_heads_up_before_the_scam_text(client):
+    from backend.app import notify
+    cid, ask = "web_warn1", {"caller_number": "+12135550178", "guardian_asked": "Who is calling?"}
+    lines = ("This is John from Medicare, her benefits are suspended.",
+             "It's about her benefits, please hold.",
+             "I just need to verify her card number, this is urgent.")
+    for said in lines:
+        client.post("/tools/assess", json={"call_id": cid, "caller_said": said, **ask})
+    texts = [s["text"] for s in notify.sent if "(213) 555-0178" in s["text"]]
+    assert len(texts) == 2
+    assert "Heads up" in texts[0] and "Blocked" in texts[1]

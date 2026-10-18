@@ -1,8 +1,0 @@
-{
-  "name": "guardian-photon",
-  "private": true,
-  "type": "module",
-  "description": "Photon iMessage sidecar: POST /send for the backend, forwards family replies to /webhooks/photon",
-  "scripts": { "start": "node index.mjs" },
-  "dependencies": { "@photon-ai/advanced-imessage": "^2.3.0" }
-}
