@@ -1,0 +1,10 @@
+.env
+**/.env
+.git
+.venv
+**/node_modules
+**/__pycache__
+web
+ml/*.jsonl
+ml/*.txt
+backend/recordings
