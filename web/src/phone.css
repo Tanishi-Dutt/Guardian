@@ -40,6 +40,8 @@ body {
   font: 16px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
   padding: 16px;
 }
+.embed body { background: transparent; padding: 0; }
+.embed .phone { height: 100vh; box-shadow: none; }
 button { font: inherit; color: inherit; cursor: pointer; }
 [hidden] { display: none !important; }
 

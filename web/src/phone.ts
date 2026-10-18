@@ -234,6 +234,13 @@ function finish(outcome: string, title: string, text: string) {
   show("result");
 }
 
+// Opened inside the landing page's call overlay: drop the page backdrop.
+if (new URLSearchParams(location.search).has("embed")) document.documentElement.classList.add("embed");
+// Overlay closed or tab gone mid-call: still let the backend decide and log the call.
+window.addEventListener("pagehide", () => {
+  if (callId) navigator.sendBeacon(`${API}/calls/web/${callId}/end`);
+});
+
 el.call.onclick = placeCall;
 el.hangup.onclick = hangUp;
 el.again.onclick = () => show("dial");
