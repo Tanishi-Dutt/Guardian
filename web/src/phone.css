@@ -1,0 +1,150 @@
+:root {
+  --bg: #eef0f3;
+  --phone: #ffffff;
+  --text: #15181d;
+  --muted: #5d6573;
+  --line: #dde1e7;
+  --chip: #f3f5f8;
+  --accent: #2459d6;
+  --go: #1f9d55;
+  --stop: #d93b3b;
+  --mid: #d98a1b;
+  --agent: #e8eefc;
+  --caller: #f1f2f4;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0d0f13;
+    --phone: #171a20;
+    --text: #eceff4;
+    --muted: #9aa3b2;
+    --line: #2a2f38;
+    --chip: #20242c;
+    --accent: #7ea2ff;
+    --go: #34c37a;
+    --stop: #f0605d;
+    --mid: #f0a845;
+    --agent: #1f2a44;
+    --caller: #23272f;
+  }
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  background: var(--bg);
+  color: var(--text);
+  font: 16px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+  padding: 16px;
+}
+button { font: inherit; color: inherit; cursor: pointer; }
+[hidden] { display: none !important; }
+
+.phone {
+  width: 100%;
+  max-width: 380px;
+  height: min(760px, calc(100vh - 32px));
+  background: var(--phone);
+  border: 1px solid var(--line);
+  border-radius: 36px;
+  padding: 20px 20px 28px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 50px rgb(0 0 0 / 0.12);
+}
+.bar { display: flex; justify-content: space-between; font-size: 14px; color: var(--muted); }
+.brand { font-weight: 600; color: var(--text); }
+.timer { font-variant-numeric: tabular-nums; }
+
+.screen { flex: 1; display: flex; flex-direction: column; gap: 14px; padding-top: 20px; min-height: 0; }
+.eyebrow { margin: 0; color: var(--muted); font-size: 14px; }
+
+.presets { display: grid; gap: 8px; }
+.preset {
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  padding: 10px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: var(--chip);
+}
+.preset span { font-size: 13px; color: var(--muted); }
+.preset.on { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+
+.custom { display: grid; gap: 6px; font-size: 13px; color: var(--muted); }
+.custom input {
+  font: inherit;
+  font-size: 17px;
+  color: var(--text);
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--phone);
+}
+
+.round {
+  margin: auto auto 0;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  border: 0;
+  color: #fff;
+  font-weight: 600;
+}
+.go { background: var(--go); }
+.stop { background: var(--stop); }
+.round:disabled { opacity: 0.5; cursor: wait; }
+.error { margin: 0; color: var(--stop); font-size: 14px; text-align: center; }
+
+.who { text-align: center; }
+.number { margin: 0; font-size: 26px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.status { margin: 4px 0 0; color: var(--muted); font-size: 14px; }
+
+.meter { height: 8px; border-radius: 4px; background: var(--chip); overflow: hidden; }
+.fill { height: 100%; width: 0; background: var(--go); transition: width 0.4s, background 0.4s; }
+.fill[data-level="mid"] { background: var(--mid); }
+.fill[data-level="high"] { background: var(--stop); }
+.meter-label { margin: -6px 0 0; font-size: 13px; color: var(--muted); }
+
+.flags { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.flags li {
+  font-size: 12px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  color: var(--stop);
+  border: 1px solid currentColor;
+}
+
+.transcript {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+}
+.transcript li { max-width: 85%; padding: 8px 12px; border-radius: 14px; font-size: 14px; }
+.transcript li span { display: block; font-size: 11px; color: var(--muted); }
+.transcript .agent { background: var(--agent); align-self: flex-start; }
+.transcript .caller { background: var(--caller); align-self: flex-end; }
+
+#result { align-items: center; justify-content: center; text-align: center; }
+#result h1 { margin: 0; font-size: 24px; }
+.result-icon { width: 64px; height: 64px; border-radius: 50%; background: var(--muted); }
+.result-icon[data-outcome="ended_scam"], .result-icon[data-outcome="rejected"] { background: var(--stop); }
+.result-icon[data-outcome="connected"], .result-icon[data-outcome="passed_verified"] { background: var(--go); }
+.result-icon[data-outcome="message"] { background: var(--mid); }
+.secondary {
+  margin-top: 12px;
+  padding: 10px 20px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--chip);
+}

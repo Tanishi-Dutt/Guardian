@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Guardian Phone</title>
+    <link rel="stylesheet" href="/src/phone.css" />
+  </head>
+  <body>
+    <main class="phone">
+      <header class="bar">
+        <span class="brand">Guardian</span>
+        <span id="timer" class="timer">0:00</span>
+      </header>
+
+      <section id="dial" class="screen">
+        <p class="eyebrow">Call Linda from</p>
+        <div id="presets" class="presets"></div>
+        <label class="custom">
+          <span>Or any number</span>
+          <input id="number" inputmode="tel" placeholder="+1 213 555 0177" />
+        </label>
+        <button id="call" class="round go" aria-label="Call">Call</button>
+        <p id="dial-error" class="error" hidden></p>
+      </section>
+
+      <section id="live" class="screen" hidden>
+        <div class="who">
+          <p id="live-number" class="number"></p>
+          <p id="live-status" class="status">Connecting…</p>
+        </div>
+        <div class="meter" aria-label="Scam risk">
+          <div id="meter-fill" class="fill"></div>
+        </div>
+        <p class="meter-label">Scam risk <b id="risk">0%</b></p>
+        <ul id="flags" class="flags"></ul>
+        <ol id="transcript" class="transcript"></ol>
+        <button id="hangup" class="round stop" aria-label="Hang up">End</button>
+      </section>
+
+      <section id="result" class="screen" hidden>
+        <div id="result-icon" class="result-icon"></div>
+        <h1 id="result-title"></h1>
+        <p id="result-body" class="status"></p>
+        <button id="again" class="secondary">New call</button>
+      </section>
+    </main>
+    <script type="module" src="/src/phone.ts"></script>
+  </body>
+</html>

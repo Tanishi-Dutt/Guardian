@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from . import config as C
 from . import db
-from .routers import admin, calls, numbers, signals, stream, tools
+from .routers import admin, calls, numbers, signals, stream, tools, web_call
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 
@@ -26,7 +26,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Guardian", lifespan=lifespan)
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
-for r in (calls, tools, stream, numbers, signals, admin):
+for r in (calls, tools, stream, numbers, signals, admin, web_call):
     app.include_router(r.router)
 
 
