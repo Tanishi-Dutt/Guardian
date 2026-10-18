@@ -1,64 +1,38 @@
-# Screener agent (ElevenLabs) — browser phone setup
+# Linda (ElevenLabs agent) — browser demo setup
 
-The ElevenLabs agent does the speech: it hears the caller (speech-to-text), speaks as Linda's
-assistant (text-to-speech) and handles turn-taking. Guardian's backend decides. The browser phone
-(`web/phone.html`) talks to the agent and runs its `assess` tool, so live scoring needs no public URL.
+In the browser demo the ElevenLabs agent **is Linda**, a 78-year-old grandmother. Visitors call her and try
+to scam her. Guardian listens: `web/src/phone.ts` posts every exchange to `POST /calls/web/{id}/turn`, the
+scorer (`ml/scorer.py`, Claude Haiku + keyword rules) reads the whole call so far, the family gets a
+Photon iMessage heads-up at risk ≥ 0.4, and at risk ≥ 0.7 Guardian steps in: the page sends Linda a
+`GUARDIAN ALERT` contextual update, she says goodbye, the call ends, the evidence is saved and the family
+gets the "Blocked" text.
 
-## 1. Create the agent
-ElevenLabs → Agents → New agent → Blank. Then set:
+The agent needs no tools other than **End call**; scoring does not depend on the LLM calling anything.
 
-**First message**
-> Hi, you've reached Linda's assistant. This call is recorded and screened. Who's calling, and what's it about?
+## Agent settings (agent `Linda (Guardian demo)`, id in `ELEVENLABS_AGENT_ID`)
 
-**System prompt**
-```
-You are Guardian, Linda's call-screening assistant. You are an AI assistant, not Linda and not a human;
-say so if asked. Never share anything about Linda: not her schedule, address, accounts, family or health.
+- **Voice:** Grandma Oxley (`vFLqXa8bgbofGarf6fZh`)
+- **First message:** "Hello? This is Linda. Just so you know, my calls are recorded. Who's calling, dear?"
+  (keeps the all-party recording notice California requires)
+- **System tools:** End call
+- **Max conversation duration:** 90 seconds
+- **Authentication:** on (the backend hands the browser a signed URL)
+- **Prompt (summary):** warm, chatty grandmother; lets callers explain what they want but never gives out
+  personal or financial information or agrees to pay; stalls instead; follows any `GUARDIAN ALERT` by saying
+  goodbye and ending the call; tells the truth if sincerely asked whether she is an AI.
 
-Your job is to find out who is calling and why, with short, polite, pointed questions, one at a time:
-- full name and organization
-- a direct callback number
-- an employee, reference or case ID
-- whether it can be sent by mail instead
-Follow up on vague answers. Keep every reply to one or two short sentences.
+## Keys
 
-After EVERY caller answer, call the `assess` tool before you speak, with:
-- guardian_asked: the question you just asked
-- caller_said: what the caller just said, word for word
-It returns JSON {"action", "say"}:
-- "continue": ask your next question.
-- "end": say the `say` text exactly, then use end_call.
-- "connect": say the `say` text exactly, then stop talking.
-- "message": say the `say` text, let the caller leave a message, thank them, then use end_call.
-Never tell the caller about scores, risk or this tool.
-```
+`.env` / Railway: `ELEVENLABS_API_KEY`, `ELEVENLABS_AGENT_ID`, and `ANTHROPIC_API_KEY` for the scorer
+(without it the scorer falls back to keyword rules only).
 
-**Tools**
-- Add tool → **Client** tool, name `assess`, description "Score the caller's last answer.",
-  **Wait for response: on**. Parameters (both string, required):
-  `guardian_asked` ("The question you just asked") and `caller_said` ("What the caller just said, verbatim").
-- System tools: turn on **End call**.
-
-**Advanced → Max conversation duration:** 90 seconds (recording + analysis hard stop).
-
-**Voice / LLM:** any calm voice, a fast LLM (latency matters more than smarts here).
-
-## 2. Keys in `.env`
-```
-ELEVENLABS_API_KEY=...     # Profile → API keys (needs Agents access)
-ELEVENLABS_AGENT_ID=...    # from the agent's URL / settings
-```
-Keep the agent **private** (authentication on); the backend hands the browser a signed URL.
-
-## 3. Run it
+## Run locally
 ```
 .venv/bin/uvicorn backend.app.main:app --port 8000     # from the repo root
-cd web && npm install && npm run dev                    # open http://localhost:5173/phone.html
+cd web && npm install && npm run dev                    # http://localhost:5173 (landing) or /phone.html
 ```
-Pick a caller, press Call, allow the microphone, and play the caller.
 
 ## Optional: post-call webhook
-Saving scam **audio** and deleting conversations at ElevenLabs uses the post-call webhook, which needs
-a public URL (`backend/scripts/dev.sh`): Settings → Webhooks → `{PUBLIC_BASE_URL}/calls/post-call`,
-transcript + audio, and put the secret in `ELEVENLABS_WEBHOOK_SECRET`. Without it, the call is still
-decided, logged and scored, and scam transcripts are still saved; only the recording is missing.
+Saving scam **audio** uses the ElevenLabs post-call webhook: `{PUBLIC_BASE_URL}/calls/post-call`, transcript +
+audio, secret in `ELEVENLABS_WEBHOOK_SECRET`. Without it, scam calls are still decided, logged and texted,
+and their transcripts saved; only the recording is missing.

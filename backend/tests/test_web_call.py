@@ -43,3 +43,20 @@ def test_family_gets_one_heads_up_before_the_scam_text(client):
     texts = [s["text"] for s in notify.sent if "(213) 555-0178" in s["text"]]
     assert len(texts) == 2
     assert "Heads up" in texts[0] and "Blocked" in texts[1]
+
+
+def test_listen_scores_every_turn_and_ends_on_scam(client):
+    from backend.app import live, notify
+    call = client.portal.call(live.start, "web_listen1", "+12135550179", "screen")
+    turn = lambda a, c: client.post(f"/calls/web/{call.id}/turn", json={"agent_said": a, "caller_said": c}).json()
+    assert turn("Hello? Who's this?", "Hi, lovely weather today.")["action"] == "continue"
+    out = turn("Oh? Who is calling?", "This is John from Medicare, her benefits are suspended.")
+    assert out["action"] == "continue" and out["risk"] >= 0.4
+    out = turn("What do you need?", "I need her card number right now, it's urgent.")
+    assert out["action"] == "end" and out["risk"] >= 0.7
+    assert turn("Hello?", "Still there?")["action"] == "end"   # stays ended
+    texts = [s["text"] for s in notify.sent if "(213) 555-0179" in s["text"]]
+    assert len(texts) == 2 and "Heads up" in texts[0] and "Blocked" in texts[1]
+    assert {c["call_id"]: c["outcome"] for c in web_calls(client)}["web_listen1"] == "ended_scam"
+    assert client.post("/calls/web/nope/turn", json={"caller_said": "hi"}).status_code == 404
+

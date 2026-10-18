@@ -1,19 +1,21 @@
-"""Browser phone: start and end a call without Twilio (web/phone.html).
+"""Browser phone: start, listen to and end a call without Twilio (web/phone.html).
 
 The page picks a caller number, asks here which route it takes (same rules as /calls/inbound),
-and for screened calls gets a signed ElevenLabs URL so the API key stays on the server. The
-agent's `assess` tool then runs in the browser and posts to /tools/assess with this call_id.
+and for screened calls gets a signed ElevenLabs URL so the API key stays on the server. Linda (the
+ElevenLabs agent) talks; the page posts every exchange to /calls/web/{id}/turn, where the scorer
+listens to the whole call and ends it the moment it turns into a scam.
 """
 import logging
 import uuid
 
 import httpx
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, BackgroundTasks, HTTPException
 from pydantic import BaseModel
 
 from .. import config as C
 from .. import live, risk
 from .calls import norm, route_for
+from .tools import score_call
 
 log = logging.getLogger(__name__)
 router = APIRouter()
@@ -53,6 +55,31 @@ async def web_start(body: WebStartIn):
         return {"call_id": call_id, "route": route, "number": number}
     return {"call_id": call_id, "route": route, "number": number, "signed_url": url,
             "dynamic_variables": {"guardian_call_id": call_id, "caller_number": number}}
+
+
+class TurnIn(BaseModel):
+    agent_said: str = ""
+    caller_said: str = ""
+
+
+@router.post("/calls/web/{call_id}/turn")
+async def web_turn(call_id: str, body: TurnIn, background: BackgroundTasks):
+    """One exchange: what Linda said, then the caller's reply. Ends the call once it's a scam."""
+    call = live.get(call_id)
+    if call is None:
+        raise HTTPException(404, "unknown call")
+    if call.final_action or call.outcome:
+        return {"action": "end" if call.final_action == "end" else "continue",
+                "risk": round(call.max_risk, 2), "red_flags": call.red_flags}
+    live.add_turn(call, "guardian", body.agent_said.strip())
+    live.add_turn(call, "caller", body.caller_said.strip())
+    result = await score_call(call, background, C.LISTEN_SCORER_TIMEOUT_S)
+    action = "end" if call.max_risk >= C.END_RISK and not call.final_action else "continue"
+    if action == "end":
+        call.final_action = "end"
+        background.add_task(live.finalize, call, "ended_scam")
+    return {"action": action, "risk": round(call.max_risk, 2), "stage": result.get("stage", "none"),
+            "red_flags": call.red_flags}
 
 
 @router.post("/calls/web/{call_id}/end")

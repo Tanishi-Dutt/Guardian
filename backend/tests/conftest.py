@@ -5,7 +5,7 @@ import os
 os.environ["DATABASE_URL"] = os.environ.get("TEST_DATABASE_URL",
                                             "postgres://postgres:guardian@localhost:5433/guardian")
 for key in ("PHOTON_SIDECAR_URL", "TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "ELEVENLABS_API_KEY",
-            "ELEVENLABS_WEBHOOK_SECRET", "SENTRY_DSN", "SCREENER_NUMBER"):
+            "ELEVENLABS_WEBHOOK_SECRET", "SENTRY_DSN", "SCREENER_NUMBER", "ANTHROPIC_API_KEY"):
     os.environ[key] = ""
 os.environ["TRUSTED_PHONE"] = "+13105550100"
 os.environ["LINDA_PHONE"] = "+13105550000"

@@ -1,11 +1,13 @@
 /**
- * Browser phone: stands in for a real phone line so the demo needs no Twilio.
+ * Browser phone: call Linda (an ElevenLabs voice agent) while Guardian listens in.
  *
  * 1. POST /calls/web/start with the caller number -> route (verified / rejected / screen).
- * 2. Screened calls open an ElevenLabs session from the signed URL. The agent's `assess`
- *    client tool runs here and posts to /tools/assess (CONTRACTS section 6), so the backend
- *    needs no public URL for live scoring.
- * 3. On end / connect the agent says its line, then the page hangs up and calls /calls/web/{id}/end.
+ * 2. Screened calls open an ElevenLabs session where Linda answers. Every time the caller finishes
+ *    a sentence, the page posts that exchange to /calls/web/{id}/turn: the scorer (Claude + rules)
+ *    reads the whole call so far, the dashboard updates, and the family gets an iMessage heads-up
+ *    when it looks like a scam.
+ * 3. When the score crosses the scam line, Guardian steps in: Linda says goodbye and the call ends;
+ *    the backend saves the evidence and texts the family. /calls/web/{id}/end settles any other call.
  */
 import { Conversation } from "@elevenlabs/client";
 
@@ -14,14 +16,13 @@ const HARD_STOP_S = 90;
 
 // CONTRACTS section 4 demo numbers, plus two unknown callers for screening.
 const PRESETS = [
-  { label: "Unknown caller", hint: "Gets screened", number: "+12135550177" },
-  { label: "Pharmacy (unknown)", hint: "Gets screened", number: "+18185550123" },
+  { label: "Unknown caller", hint: "Linda answers, Guardian listens", number: "+12135550177" },
+  { label: "Pharmacy (unknown)", hint: "Linda answers, Guardian listens", number: "+18185550123" },
   { label: "Son (David)", hint: "Verified, rings through", number: "+13105550111" },
   { label: "Flagged scam number", hint: "Score 92, rejected", number: "+12135550142" },
 ];
 
-type Action = "continue" | "end" | "connect" | "message";
-type Assess = { action: Action; risk: number; say: string };
+type Turn = { action: "continue" | "end"; risk: number; red_flags: string[] };
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 const el = {
@@ -38,11 +39,9 @@ const el = {
 let conversation: Conversation | null = null;
 let callId: string | null = null;
 let callNumber = "";
-let decided: Action | null = null;
-let lastAgent = "";
-let lastCaller = "";
+let scamCaught = false;
+let lindaSaid: string[] = []; // Linda's lines since the caller last spoke
 let timerId: number | undefined;
-let stream: EventSource | null = null;
 let ending = false;
 
 function show(screen: "dial" | "live" | "result") {
@@ -82,54 +81,58 @@ function setRisk(risk: number) {
   el.meter.dataset.level = risk >= 0.7 ? "high" : risk >= 0.4 ? "mid" : "low";
 }
 
-function addTurn(who: "agent" | "caller", text: string) {
+function setFlags(flags: string[]) {
+  el.flags.replaceChildren(...flags.map((f) => {
+    const li = document.createElement("li");
+    li.textContent = f;
+    return li;
+  }));
+}
+
+function addTurn(who: "linda" | "caller", text: string) {
   const li = document.createElement("li");
-  li.className = who;
-  li.innerHTML = `<span>${who === "agent" ? "Guardian" : "You"}</span>`;
+  li.className = who === "linda" ? "agent" : "caller";
+  li.innerHTML = `<span>${who === "linda" ? "Linda" : "You"}</span>`;
   li.append(document.createTextNode(text));
   el.transcript.append(li);
   el.transcript.scrollTop = el.transcript.scrollHeight;
 }
 
-function watchFlags(id: string) {
-  stream = new EventSource(`${API}/stream/live`);
-  stream.addEventListener("score", (e) => {
-    const ev = JSON.parse((e as MessageEvent).data);
-    if (ev.call_id !== id) return;
-    el.flags.replaceChildren(...(ev.data.red_flags as string[]).map((f) => {
-      const li = document.createElement("li");
-      li.textContent = f;
-      return li;
-    }));
-  });
-}
-
-async function assess(params: { guardian_asked?: string; caller_said?: string }): Promise<string> {
-  if (!callId) return JSON.stringify({ action: "continue", say: "" });
+/** Guardian listens: score each exchange as soon as the caller finishes speaking. */
+async function listen(callerSaid: string) {
+  const id = callId;
+  const agentSaid = lindaSaid.join(" ");
+  lindaSaid = [];
+  if (!id || scamCaught) return;
   try {
-    const r = await fetch(`${API}/tools/assess`, {
+    const r = await fetch(`${API}/calls/web/${id}/turn`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        call_id: callId,
-        caller_number: callNumber,
-        guardian_asked: params.guardian_asked || lastAgent,
-        caller_said: params.caller_said || lastCaller,
-      }),
+      body: JSON.stringify({ agent_said: agentSaid, caller_said: callerSaid }),
     });
-    const out: Assess = await r.json();
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const out: Turn = await r.json();
+    if (id !== callId) return;
     setRisk(out.risk);
-    if (out.action !== "continue") {
-      decided = out.action;
-      el.liveStatus.textContent = { end: "Ending call…", connect: "Connecting to Linda…",
-                                    message: "Taking a message…" }[out.action];
-      if (out.action !== "message") window.setTimeout(hangUp, 12000); // backstop if no mode change
-    }
-    return JSON.stringify({ action: out.action, say: out.say });
+    setFlags(out.red_flags);
+    if (out.risk >= 0.4 && out.action !== "end") el.liveStatus.textContent = "Guardian is suspicious · family alerted";
+    if (out.action === "end") stepIn();
   } catch (err) {
-    console.error("assess failed", err);
-    return JSON.stringify({ action: "continue", say: "" });
+    console.error("Guardian listen failed", err);
   }
+}
+
+/** Scam detected: Linda wraps up and Guardian ends the call. */
+function stepIn() {
+  if (scamCaught) return;
+  scamCaught = true;
+  el.liveStatus.textContent = "Scam detected · Guardian is ending the call";
+  conversation?.sendContextualUpdate(
+    "GUARDIAN ALERT: Guardian has identified this caller as a scammer. Do not share anything. " +
+      "Say a short, firm goodbye (for example that you never give out information over the phone " +
+      "and your family handles these things), then end the call.",
+  );
+  window.setTimeout(hangUp, 9000); // backstop if Linda keeps talking
 }
 
 async function placeCall() {
@@ -151,7 +154,7 @@ async function placeCall() {
     if (body.route === "rejected")
       return finish("rejected", "Call rejected", "Known scam number. Linda's phone never rang.");
 
-    await startScreening(body.signed_url, body.dynamic_variables);
+    await startCall(body.signed_url, body.dynamic_variables);
   } catch (err) {
     el.dialError.textContent = `Couldn't place the call: ${(err as Error).message}`;
     el.dialError.hidden = false;
@@ -160,34 +163,37 @@ async function placeCall() {
   }
 }
 
-async function startScreening(signedUrl: string, dynamicVariables: Record<string, string>) {
-  decided = null;
+async function startCall(signedUrl: string, dynamicVariables: Record<string, string>) {
+  scamCaught = false;
   ending = false;
-  lastAgent = lastCaller = "";
+  lindaSaid = [];
   el.transcript.replaceChildren();
-  el.flags.replaceChildren();
+  setFlags([]);
   setRisk(0);
-  el.liveNumber.textContent = callNumber;
-  el.liveStatus.textContent = "Connecting…";
+  el.liveNumber.textContent = "Linda";
+  el.liveStatus.textContent = "Ringing…";
   show("live");
-  watchFlags(callId!);
 
   conversation = await Conversation.startSession({
     signedUrl,
     dynamicVariables,
-    clientTools: { assess },
     onConnect: () => {
-      el.liveStatus.textContent = "Guardian is screening this call";
+      el.liveStatus.textContent = "Connected · Guardian is listening";
       startTimer();
     },
     onMessage: ({ message, role }) => {
-      if (role === "agent") lastAgent = message;
-      else lastCaller = message;
-      addTurn(role === "agent" ? "agent" : "caller", message);
+      if (!message.trim()) return;
+      if (role === "agent") {
+        lindaSaid.push(message);
+        addTurn("linda", message);
+      } else {
+        addTurn("caller", message);
+        void listen(message);
+      }
     },
     onModeChange: ({ mode }) => {
-      // The agent has finished its closing line: hang up like a phone would.
-      if (mode === "listening" && (decided === "end" || decided === "connect")) hangUp();
+      // Linda has finished her goodbye after Guardian stepped in: hang up like a phone would.
+      if (mode === "listening" && scamCaught) hangUp();
     },
     onDisconnect: () => void wrapUp(),
     onError: (message) => console.error("ElevenLabs:", message),
@@ -210,18 +216,16 @@ async function wrapUp() {
   callId = null;
   ending = true;
   window.clearInterval(timerId);
-  stream?.close();
   conversation = null;
-  const seen: Record<string, string> = { end: "ended_scam", connect: "connected" };
-  let outcome = seen[decided ?? ""] ?? "message";
+  let outcome = scamCaught ? "ended_scam" : "message";
   try {
     const r = await fetch(`${API}/calls/web/${id}/end`, { method: "POST" });
     outcome = (await r.json()).outcome ?? outcome;
   } catch { /* backend down: show what the page saw */ }
   const copy: Record<string, [string, string]> = {
-    ended_scam: ["Scam call ended", "Guardian hung up. Evidence saved and the family was texted."],
-    connected: ["Connected to Linda", "Low risk. Linda heard a short whisper, then the call. Recording deleted."],
-    message: ["Message taken", "Guardian wasn't sure, so it took a message for Linda. Recording deleted."],
+    ended_scam: ["Scam caught", "Guardian ended the call, saved the evidence and texted Linda's family."],
+    connected: ["Call ended", "Guardian heard nothing suspicious. The recording was deleted."],
+    message: ["Call ended", "Guardian heard nothing that crossed the scam line. The recording was deleted."],
   };
   const [title, text] = copy[outcome] ?? copy.message;
   finish(outcome, title, text);

@@ -62,6 +62,7 @@ DECIDE_AFTER_TURNS = 3
 DECIDE_AFTER_SECONDS = 60
 HARD_STOP_SECONDS = 90
 SCORER_TIMEOUT_S = 1.3
+LISTEN_SCORER_TIMEOUT_S = 8.0   # browser calls score off the voice path, so Claude gets more time
 
 SAY = {
     "continue": "",
