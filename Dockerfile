@@ -1,5 +1,5 @@
 # One container for Railway (or any Docker host): the FastAPI backend on $PORT plus the
-# Photon family messenger on :8787 next to it. Built from the repo root (see railway.json).
+# Photon family messenger on :8787 next to it. Lives at the repo root so Railway always detects it.
 FROM python:3.13-slim
 
 RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates \
