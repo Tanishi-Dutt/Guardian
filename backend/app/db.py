@@ -1,5 +1,7 @@
 """asyncpg pool, schema, demo seed and reset."""
+import asyncio
 import json
+import logging
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -8,6 +10,7 @@ import asyncpg
 
 from . import config
 
+log = logging.getLogger(__name__)
 SCHEMA = Path(__file__).resolve().parents[1] / "db" / "schema.sql"
 TABLES = ["events", "call_logs", "number_profiles", "scam_evidence", "signals", "messages",
           "blocked_numbers", "verified_numbers", "trusted_contacts", "users"]
@@ -21,7 +24,15 @@ async def _init_conn(conn):
 
 async def connect():
     global pool
-    pool = await asyncpg.create_pool(config.DATABASE_URL, min_size=1, max_size=10, init=_init_conn)
+    for attempt in range(1, 4):  # slow venue Wi-Fi can time out the TLS handshake to Tiger Cloud
+        try:
+            pool = await asyncpg.create_pool(config.DATABASE_URL, min_size=3, max_size=10, timeout=30,
+                                             command_timeout=15, init=_init_conn)
+            break
+        except (OSError, asyncio.TimeoutError) as e:
+            if attempt == 3:
+                raise
+            log.warning("database connect attempt %d failed (%s); retrying", attempt, type(e).__name__)
     async with pool.acquire() as conn:
         await conn.execute(SCHEMA.read_text())
         if not await conn.fetchval("SELECT 1 FROM users WHERE id = $1", config.DEMO_USER_ID):

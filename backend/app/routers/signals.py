@@ -44,5 +44,6 @@ async def post_signal(body: SignalIn):
     when = "during" if during else "right after"
     text = (f"Guardian URGENT: Mom opened a banking app {when} a call from {live.pretty(number)}, "
             f"a number that isn't on her verified list. Please call her now.")
+    await db.execute("INSERT INTO signals (user_id, kind, ts) VALUES ($1, 'bank_alert', now())", body.user_id)
     await live.alert_family(call_id, body.user_id, "bank_app", text, number)
     return {"ok": True, "alerted": True}

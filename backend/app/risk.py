@@ -120,8 +120,8 @@ async def user_safety(user_id: str) -> dict:
              count(*) FILTER (WHERE outcome IN ('ended_scam', 'rejected')) AS blocked
            FROM call_logs WHERE user_id = $1 AND ts > now() - interval '7 days'""", user_id)
     bank = await db.fetchval(
-        """SELECT count(*) FROM events WHERE user_id = $1 AND type = 'alert'
-           AND data->>'kind' = 'bank_app' AND ts > now() - interval '7 days'""", user_id)
+        """SELECT count(*) FROM signals WHERE user_id = $1 AND kind = 'bank_alert'
+           AND ts > now() - interval '7 days'""", user_id)
     return {
         "safety_score": safety_score(row["unverified_connected"], row["scam_screened"], bank),
         "scam_calls_blocked_7d": row["blocked"],

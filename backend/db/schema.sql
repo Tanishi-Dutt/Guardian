@@ -62,7 +62,7 @@ CREATE TABLE IF NOT EXISTS scam_evidence (     -- scam calls ONLY
 
 CREATE TABLE IF NOT EXISTS signals (
   user_id TEXT,
-  kind TEXT,                     -- bank_app_open
+  kind TEXT,                     -- bank_app_open | bank_alert (an urgent family alert was sent)
   ts TIMESTAMPTZ NOT NULL
 );
 
