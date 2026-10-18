@@ -68,4 +68,10 @@ env `VITE_API_BASE=https://api.yourdomain.com`).
 - Tables `blocked_numbers` (per-user blocks from the family) and `messages` (text of messages left for Linda).
 - `GET /messages`, `GET /e/{evidence_id}` (evidence page linked from the family text) and `GET /e/{evidence_id}/audio`, `GET /health`.
 - The `decision` event for `connected` also carries `whisper` (the line shown on the phone simulator).
+- Browser calls (no Twilio): `POST /calls/web/start {from_number}` → `{call_id, route, signed_url?, dynamic_variables?}`,
+  `POST /calls/web/{id}/turn {agent_said, caller_said}` → `{action: continue|end, risk, stage, red_flags}` (scores every
+  exchange, ends at `END_RISK`), `POST /calls/web/{id}/end` → `{ok, outcome}`.
+- `alert` events have a third kind, `likely_scam`: the one-time family heads-up when a call first reaches `WARN_RISK` (0.40).
+- The scorer (`ml/scorer.py`) uses Claude Haiku when `ANTHROPIC_API_KEY` is set, with the keyword rules as backup; `model` is
+  `claude-haiku-5-5` or `stub`.
 - `evidence_saved` is sent twice for a scam call: right away with `recording_url: null`, then again once the audio is saved. The dashboard should upsert on `evidence_id`.

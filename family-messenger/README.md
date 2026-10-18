@@ -1,25 +1,30 @@
 # family-messenger
 
-A [Spectrum](https://photon.codes/docs/spectrum-ts) project. Wired with: imessage.
+Guardian's iMessage relay, built on [Photon Spectrum](https://photon.codes/docs/spectrum-ts). The backend
+never talks to Photon directly; it posts each family alert here.
 
-## Environment
+- `POST /send {to, text}` sends `text` as an iMessage to `to` (called by `backend/app/notify.py` when
+  `PHOTON_SIDECAR_URL` is set).
+- Replies from the family (`BLOCK`, `SAFE`) are forwarded to `{BACKEND_URL}/webhooks/photon` as `{from, text}`.
+- `GET /health` returns `{ok: true}`.
 
-Before running, open `.env` and fill in the values:
+## Environment (`.env`)
 
-From your project Settings on the [Photon dashboard](https://app.photon.codes):
+| Variable | Default | Purpose |
+|---|---|---|
+| `PROJECT_ID`, `PROJECT_SECRET` | | Spectrum Cloud project (Photon dashboard → project settings) |
+| `BACKEND_URL` | `http://localhost:8000` | Where replies are forwarded |
+| `PHOTON_SIDECAR_PORT` | `8787` | Port for `/send` |
+| `PHOTON_SIDECAR_SECRET` | | Optional bearer token the backend must send |
 
-- `PROJECT_ID`
-- `PROJECT_SECRET`
+On shared-pool Photon plans, every recipient must be added as a project user in the dashboard first.
 
 ## Run
 
 ```sh
 npm install
-npm run start
+npm start
 ```
 
-## Where to go next
-
-- [Spectrum docs](https://photon.codes/docs/spectrum-ts)
-- Edit `src/index.ts` to replace the echo loop with real agent logic.
-- Add more providers from `spectrum-ts/providers/*`.
+In production it runs inside the same container as the backend (see the root `Dockerfile` and
+`backend/deploy/start.sh`).
