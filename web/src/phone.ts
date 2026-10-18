@@ -6,8 +6,8 @@
  *    a sentence, the page posts that exchange to /calls/web/{id}/turn: the scorer (Claude + rules)
  *    reads the whole call so far, the dashboard updates, and the family gets an iMessage heads-up
  *    when it looks like a scam.
- * 3. When the score crosses the scam line, Guardian steps in: Linda says goodbye and the call ends;
- *    the backend saves the evidence and texts the family. /calls/web/{id}/end settles any other call.
+ * 3. The moment the score crosses the scam line, Guardian cuts Linda off and plays its own
+ *    announcement; the backend saves the evidence and texts the family. /calls/web/{id}/end settles any other call.
  */
 import { Conversation } from "@elevenlabs/client";
 
@@ -43,6 +43,8 @@ let scamCaught = false;
 let lindaSaid: string[] = []; // Linda's lines since the caller last spoke
 let timerId: number | undefined;
 let ending = false;
+const guardianVoice = new Audio("/guardian-cutoff.mp3"); // "This is Guardian… I've ended this call…"
+guardianVoice.preload = "auto";
 
 function show(screen: "dial" | "live" | "result") {
   el.dial.hidden = screen !== "dial";
@@ -122,17 +124,13 @@ async function listen(callerSaid: string) {
   }
 }
 
-/** Scam detected: Linda wraps up and Guardian ends the call. */
+/** Scam detected: Guardian cuts Linda off at once and takes the line for one sentence. */
 function stepIn() {
   if (scamCaught) return;
   scamCaught = true;
-  el.liveStatus.textContent = "Scam detected · Guardian is ending the call";
-  conversation?.sendContextualUpdate(
-    "GUARDIAN ALERT: Guardian has identified this caller as a scammer. Do not share anything. " +
-      "Say a short, firm goodbye (for example that you never give out information over the phone " +
-      "and your family handles these things), then end the call.",
-  );
-  window.setTimeout(hangUp, 9000); // backstop if Linda keeps talking
+  el.liveStatus.textContent = "Scam detected · Guardian cut the call";
+  void guardianVoice.play().catch((err) => console.error("Guardian announcement blocked", err));
+  void hangUp();
 }
 
 async function placeCall() {
@@ -191,10 +189,6 @@ async function startCall(signedUrl: string, dynamicVariables: Record<string, str
         void listen(message);
       }
     },
-    onModeChange: ({ mode }) => {
-      // Linda has finished her goodbye after Guardian stepped in: hang up like a phone would.
-      if (mode === "listening" && scamCaught) hangUp();
-    },
     onDisconnect: () => void wrapUp(),
     onError: (message) => console.error("ElevenLabs:", message),
   });
@@ -223,7 +217,7 @@ async function wrapUp() {
     outcome = (await r.json()).outcome ?? outcome;
   } catch { /* backend down: show what the page saw */ }
   const copy: Record<string, [string, string]> = {
-    ended_scam: ["Scam caught", "Guardian ended the call, saved the evidence and texted Linda's family."],
+    ended_scam: ["Guardian cut the call", "Scam detected. Linda was cut off, the evidence was saved and her family got an iMessage."],
     connected: ["Call ended", "Guardian heard nothing suspicious. The recording was deleted."],
     message: ["Call ended", "Guardian heard nothing that crossed the scam line. The recording was deleted."],
   };

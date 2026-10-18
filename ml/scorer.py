@@ -120,7 +120,8 @@ def score(transcript, call_id=None):
         kw = _keywords(transcript)
         model = "stub"
         try:
-            ai = _claude(transcript)
+            # An obvious scam on the rules alone ends the call now instead of after a model round-trip.
+            ai = None if kw["risk"] >= END_THRESHOLD else _claude(transcript)
         except Exception:
             log.exception("Claude scorer failed for call %s; using keyword rules", call_id)
             ai = None

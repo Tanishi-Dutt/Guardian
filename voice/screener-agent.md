@@ -3,9 +3,10 @@
 In the browser demo the ElevenLabs agent **is Linda**, a 78-year-old grandmother. Visitors call her and try
 to scam her. Guardian listens: `web/src/phone.ts` posts every exchange to `POST /calls/web/{id}/turn`, the
 scorer (`ml/scorer.py`, Claude Haiku + keyword rules) reads the whole call so far, the family gets a
-Photon iMessage heads-up at risk ≥ 0.4, and at risk ≥ 0.7 Guardian steps in: the page sends Linda a
-`GUARDIAN ALERT` contextual update, she says goodbye, the call ends, the evidence is saved and the family
-gets the "Blocked" text.
+Photon iMessage heads-up at risk ≥ 0.4, and at risk ≥ 0.7 Guardian cuts the call at once: Linda's audio
+stops, Guardian's own voice plays `web/public/guardian-cutoff.mp3` ("This is Guardian, Linda's call
+protection. I've ended this call because it matches a scam…"), the evidence is saved and the family gets
+the "Blocked" text. Obvious scams on the keyword rules alone skip the Claude round-trip.
 
 The agent needs no tools other than **End call**; scoring does not depend on the LLM calling anything.
 
@@ -18,8 +19,8 @@ The agent needs no tools other than **End call**; scoring does not depend on the
 - **Max conversation duration:** 90 seconds
 - **Authentication:** on (the backend hands the browser a signed URL)
 - **Prompt (summary):** warm, chatty grandmother; lets callers explain what they want but never gives out
-  personal or financial information or agrees to pay; stalls instead; follows any `GUARDIAN ALERT` by saying
-  goodbye and ending the call; tells the truth if sincerely asked whether she is an AI.
+  personal or financial information or agrees to pay; stalls instead;
+  tells the truth if sincerely asked whether she is an AI. (Guardian, not Linda, ends scam calls.)
 
 ## Keys
 
