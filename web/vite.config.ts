@@ -1,4 +1,3 @@
-import { resolve } from "node:path";
 import { defineConfig } from "vite";
 
 export default defineConfig({
@@ -6,7 +5,7 @@ export default defineConfig({
   server: { port: 5173 },
   build: {
     rollupOptions: {
-      input: { phone: resolve(__dirname, "phone.html") },
+      input: { phone: "phone.html" }, // resolved from web/
     },
   },
 });
